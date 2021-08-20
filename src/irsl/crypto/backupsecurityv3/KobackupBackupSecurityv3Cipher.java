@@ -5,6 +5,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
@@ -23,7 +25,7 @@ public class KobackupBackupSecurityv3Cipher extends KobackupCipher {
 	private KobackupBackupSecurityv3Cipher(String password) {
 		super(password);
 	}
-	
+
 	public String getEncMsgV3()
 	{
 		return encMsgV3;
@@ -55,6 +57,13 @@ public class KobackupBackupSecurityv3Cipher extends KobackupCipher {
 		return ksc;
 	}
 
+	public static KobackupBackupSecurityv3Cipher initTar(String password, String encMsgV3, String iv) throws InvalidAlgorithmParameterException
+	{
+		KobackupBackupSecurityv3Cipher ksc = init(password, encMsgV3);
+		ksc.processIv(password, iv);
+		return ksc;
+	}
+
 	private void processEncMsgV3(String encMsgV3) throws InvalidAlgorithmParameterException {
 		if((encMsgV3 == null) || (encMsgV3.length() != 96))
 			throw new InvalidAlgorithmParameterException("encMsgV3 must be 96 characters");
@@ -62,8 +71,32 @@ public class KobackupBackupSecurityv3Cipher extends KobackupCipher {
 		String initVectorHexStr = encMsgV3.substring(64);
 		this.initializationVector = C0913d_hex.m5087a(initVectorHexStr);
 		String aesKeyStr = C0914e_pbkdf2_top.m5088a(password, keyDerivationSeedHexStr);
+		System.err.println(aesKeyStr);
 		aesKey = C0913d_hex.m5087a(aesKeyStr);
 		this.encMsgV3 = encMsgV3;		
+	}
+
+	public static byte[] hexStringToByteArray(String s) {
+			int len = s.length();
+			byte[] b = new byte[len / 2];
+			for (int i = 0; i < len; i += 2) {
+					b[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character
+									.digit(s.charAt(i + 1), 16));
+			}
+			return b;
+	}
+
+	private void processIv(String password, String iv) throws InvalidAlgorithmParameterException {
+		String initVectorHexStr = iv;
+		this.initializationVector = C0913d_hex.m5087a(initVectorHexStr);
+		MessageDigest md;
+		try {
+			md = MessageDigest.getInstance("SHA-256");
+			aesKey = Arrays.copyOfRange(md.digest(password.getBytes()), 0, 16);			
+		}
+		catch (NoSuchAlgorithmException e) {
+
+		}
 	}
 
 	@Override
